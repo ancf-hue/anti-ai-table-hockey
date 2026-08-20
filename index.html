@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3D Настольный Хоккей</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+
+<style>
+    body { 
+        margin: 0; overflow: hidden; background: #000; 
+        font-family: 'Segoe UI', Arial, sans-serif; 
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+    }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    
+    #startScreen {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.92);
+        display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+        z-index: 999; padding: 30px 20px; box-sizing: border-box;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    #startTop { display: flex; flex-direction: column; align-items: center; margin-top: 40px; width: 100%; }
+    #startLogo {
+        width: clamp(60px, 15vw, 80px);
+        height: clamp(60px, 15vw, 80px);
+        margin-bottom: 15px;
+        filter: drop-shadow(0 0 15px rgba(217, 4, 41, 0.7));
+        -webkit-filter: drop-shadow(0 0 15px rgba(217, 4, 41, 0.7));
+    }
+    #startScreen h1 {
+        color: #fff; font-size: clamp(24px, 5vw, 36px); 
+        margin: 10px 0;
+        text-shadow: 0 0 15px #d90429; text-align: center;
+        word-break: break-word;
+    }
+    #startScreen p { 
+        color: #ccc; font-size: clamp(14px, 2vw, 16px); 
+        margin-bottom: 30px; text-align: center; 
+        max-width: 90%; 
+        padding: 0 10px;
+    }
+    #startBtn {
+        padding: 15px 40px; font-size: clamp(16px, 2.5vw, 20px); 
+        font-weight: bold;
+        background: #d90429; color: white; border: none; border-radius: 12px;
+        cursor: pointer; transition: 0.2s;
+        box-shadow: 0 0 20px rgba(217, 4, 41, 0.5);
+        touch-action: manipulation;
+        min-height: 44px;
+        min-width: 200px;
+        -webkit-tap-highlight-color: transparent;
+    }
+    #startBtn:active { transform: scale(0.95); }
+    #startBtn:hover { background: #e53935; }
+
+    #startSupport {
+        color: #ccc; font-size: clamp(11px, 1.5vw, 13px); 
+        text-align: center; line-height: 1.6;
+        max-width: 600px; width: 90%;
+        background: rgba(255,255,255,0.05); 
+        padding: clamp(12px, 2vw, 15px) clamp(15px, 3vw, 20px);
+        border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 10px;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+    }
+    #startSupport strong { color: #fff; }
+    #startSupport a { color: #4fc3f7; text-decoration: none; font-weight: bold; }
+    #startSupport a:active { opacity: 0.7; }
+    
+    #startCopyBtn {
+        background: #d90429; color: white; border: none; 
+        padding: 6px 12px; border-radius: 4px; cursor: pointer; 
+        font-size: clamp(11px, 1.5vw, 12px); 
+        margin-left: 5px; vertical-align: middle;
+        touch-action: manipulation;
+        min-height: 32px;
+        -webkit-tap-highlight-color: transparent;
+    }
+    #startCopyBtn:active { opacity: 0.7; }
+    #startCopyMsg { 
+        color: #4caf50; font-weight: bold; display: none; 
+        margin-left: 5px; 
+        font-size: clamp(14px, 2vw, 16px);
+    }
+
+    #game-ui {
+        position: absolute; top: clamp(10px, 2vh, 15px); 
+        left: 50%; transform: translateX(-50%);
+        display: flex; flex-direction: column; align-items: center; z-index: 10;
+        pointer-events: none;
+        width: 90%;
+        max-width: 500px;
+    }
+    #top-icon {
+        width: clamp(32px, 6vw, 48px);
+        height: clamp(32px, 6vw, 48px);
+        margin-bottom: 5px;
+        filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));
+        -webkit-filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));
+    }
+    #hud {
+        color: #fff; 
+        font-size: clamp(20px, 4vw, 32px); 
+        font-weight: bold; letter-spacing: 4px;
+        background: rgba(0,0,0,0.7); 
+        padding: 6px clamp(15px, 3vw, 25px); 
+        border-radius: 10px;
+        border: 2px solid #d90429; 
+        text-shadow: 0 0 10px #d90429; 
+        margin-bottom: 5px;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        width: auto;
+        min-width: 80px;
+        text-align: center;
+    }
+    #info {
+        color: #fff; 
+        font-size: clamp(10px, 1.5vw, 14px); 
+        background: rgba(0,0,0,0.6);
+        padding: 4px clamp(10px, 2vw, 16px); 
+        border-radius: 6px; 
+        white-space: nowrap; 
+        text-align: center;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #goal {
+        position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+        color: #ffeb3b; font-size: clamp(50px, 12vw, 80px); 
+        font-weight: bold;
+        text-shadow: 0 0 30px #ff0; display: none;
+        animation: flash 0.8s ease-out; z-index: 50; pointer-events: none;
+    }
+    #winner {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        color: #fff; 
+        font-size: clamp(24px, 5vw, 40px); 
+        font-weight: bold; text-align: center;
+        text-shadow: 0 0 30px #d90429; display: none;
+        background: rgba(0,0,0,0.95);
+        padding: clamp(20px, 3vw, 30px) clamp(20px, 4vw, 40px);
+        border-radius: 20px;
+        border: 3px solid #d90429; z-index: 200; 
+        width: 85%; max-width: 400px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 0 50px rgba(217, 4, 41, 0.3);
+    }
+    #winner button {
+        margin-top: 20px; 
+        padding: clamp(10px, 1.5vw, 12px) clamp(20px, 3vw, 30px); 
+        font-size: clamp(14px, 2vw, 18px);
+        background: #d90429; color: white; border: none; border-radius: 8px;
+        cursor: pointer; transition: 0.2s; 
+        width: 100%;
+        touch-action: manipulation;
+        min-height: 44px;
+        -webkit-tap-highlight-color: transparent;
+    }
+    #winner button:active { transform: scale(0.95); }
+    #winner button:hover { background: #e53935; }
+
+    @keyframes flash {
+        0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+        50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+    }
+
+    /* Улучшения для мобильных устройств */
+    @media (max-width: 480px) {
+        #startScreen { padding: 15px 10px; }
+        #startTop { margin-top: 20px; }
+        #startBtn { padding: 12px 20px; min-width: 150px; }
+        #winner { width: 92%; padding: 20px; }
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+        #startTop { margin-top: 10px; }
+        #startLogo { width: 40px; height: 40px; }
+        #startScreen h1 { font-size: 20px; }
+        #startSupport { font-size: 10px; padding: 8px 12px; }
+        #startBtn { padding: 8px 20px; font-size: 14px; min-height: 36px; }
+    }
+
+    /* Для устройств с нестандартными экранами */
+    @supports (padding: max(0px)) {
+        #startScreen { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
+        #winner { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
+    }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+    <div id="startTop">
+        <img src="favicon.ico" id="startLogo" alt="icon" onerror="this.style.display='none'">
+        <h1>3D Настольный Хоккей</h1>
+        <p>Нажмите кнопку, чтобы включить звук и начать игру</p>
+        <button id="startBtn">НАЧАТЬ ИГРУ</button>
+    </div>
+
+    <div id="startSupport">
+        <div>🤝 <strong>ПОДДЕРЖАТЬ ПРОЕКТ</strong>  Приложение бесплатное. Было и останется.</div>
+        <div>Если проект помог вам или вашим близким — можете поддержать разработку добровольным переводом.</div>
+        <div style="margin: 6px 0; word-break: break-all;">
+            📱 ПЕРЕВОД ПО НОМЕРУ ТЕЛЕФОНА: 
+            <span style="color: #fff; font-weight: bold; font-size: clamp(13px, 2vw, 14px);">8-920-227-56-76</span>
+            <button id="startCopyBtn" onclick="copyNumber('start')">📋 Копировать</button>
+            <span id="startCopyMsg">✅</span>
+        </div>
+        <div>✅ Деньги придут мгновенно. Без комиссии. Безопасно.</div>
+        <div>❤️ Спасибо за поддержку!</div>
+        <div style="margin-top: 5px;">
+            🌟 👉 <a href="https://ancf-hue.github.io/" target="_blank">Каталог Anti-AI Shield</a>
+        </div>
+    </div>
+</div>
+
+<div id="game-ui">
+    <img src="favicon.ico" id="top-icon" alt="icon" onerror="this.style.display='none'">
+    <div id="hud"><span id="p1">0</span> : <span id="p2">0</span></div>
+    <div id="info">Двигай пальцем или мышью. Игра до 10 голов!</div>
+</div>
+
+<div id="goal">ГОЛ!</div>
+<div id="winner">
+    <div id="winnerText"></div>
+    <button onclick="restartGame()">🔄 Сыграть ещё</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+<script>
+// ========== КОНСТАНТЫ ==========
+const TABLE_W = 10;
+const TABLE_L = 16;
+const WALL_H = 0.4;
+const GOAL_W = 3.5;
+const PUCK_R = 0.4;
+const PUCK_H = 0.15;
+const MALLET_R = 0.7;
+const MALLET_H = 0.35;
+const FRICTION = 0.992;
+const MAX_PUCK_SPEED = 0.6;
+const WIN_SCORE = 10;
+
+// ========== СОСТОЯНИЕ ИГРЫ ==========
+let scoreP1 = 0, scoreP2 = 0;
+let gameOver = false;
+let gameStarted = false;
+let audioCtx = null;
+let touchId = null;
+let lastTouchTime = 0;
+
+// ========== DOM ЭЛЕМЕНТЫ ==========
+const startScreen = document.getElementById('startScreen');
+const startBtn = document.getElementById('startBtn');
+const goalEl = document.getElementById('goal');
+const winnerEl = document.getElementById('winner');
+const winnerTextEl = document.getElementById('winnerText');
+const p1El = document.getElementById('p1');
+const p2El = document.getElementById('p2');
+
+// ========== АУДИО ==========
+function initAudio() {
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return true;
+    } catch (e) {
+        console.log('Audio not available');
+        return false;
+    }
+}
+
+function playPuckSound(velocity) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    const vol = Math.min(velocity * 0.6, 0.35);
+    if (vol < 0.05) return;
+
+    try {
+        const bufferSize = audioCtx.sampleRate * 0.1;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 800 + velocity * 300;
+
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+        noise.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        noise.start();
+    } catch (e) {
+        // Игнорируем ошибки аудио
+    }
+}
+
+function speak(text) {
+    try {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ru-RU';
+            utterance.rate = 1.1;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+    } catch (e) {
+        // Игнорируем ошибки синтеза речи
+    }
+}
+
+// ========== КОПИРОВАНИЕ НОМЕРА ==========
+function copyNumber(source) {
+    const number = "8-920-227-56-76";
+    const showMessage = (source) => {
+        const msgId = source === 'start' ? 'startCopyMsg' : 'copyMsg';
+        const msg = document.getElementById(msgId);
+        if (msg) {
+            msg.style.display = 'inline';
+            setTimeout(() => { msg.style.display = 'none'; }, 2000);
+        }
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(number).then(() => {
+            showMessage(source);
+        }).catch(() => fallbackCopy(number, source, showMessage));
+    } else {
+        fallbackCopy(number, source, showMessage);
+    }
+}
+
+function fallbackCopy(text, source, showMessage) {
+    try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        textArea.style.pointerEvents = "none";
+        textArea.style.top = "-1000px";
+        textArea.style.left = "-1000px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        showMessage(source);
+    } catch (e) {
+        alert("Скопируйте номер вручную: " + text);
+    }
+}
+
+// ========== THREE.JS СЦЕНА ==========
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111827);
+scene.fog = new THREE.Fog(0x111827, 20, 50);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.set(0, 16, 11);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ 
+    antialias: true,
+    powerPreference: "default"
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Ограничиваем для производительности
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+// ========== ОСВЕЩЕНИЕ ==========
+const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambient);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+dirLight.position.set(5, 15, 8);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 1024;
+dirLight.shadow.mapSize.height = 1024;
+dirLight.shadow.camera.left = -15;
+dirLight.shadow.camera.right = 15;
+dirLight.shadow.camera.top = 15;
+dirLight.shadow.camera.bottom = -15;
+scene.add(dirLight);
+
+const spotLight = new THREE.SpotLight(0xffffff, 1.0, 40, Math.PI/4, 0.3);
+spotLight.position.set(0, 12, 0);
+spotLight.castShadow = true;
+scene.add(spotLight);
+
+// ========== СТОЛ ==========
+const tableMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.05 });
+const table = new THREE.Mesh(new THREE.BoxGeometry(TABLE_W, 0.3, TABLE_L), tableMat);
+table.position.y = -0.15;
+table.receiveShadow = true;
+scene.add(table);
+
+// ========== РАЗМЕТКА ==========
+const lineMat = new THREE.MeshBasicMaterial({ color: 0xd90429 });
+const centerLine = new THREE.Mesh(new THREE.BoxGeometry(TABLE_W, 0.02, 0.08), lineMat);
+centerLine.position.y = 0.01;
+scene.add(centerLine);
+
+const circleGeo = new THREE.RingGeometry(1.8, 1.88, 48);
+const circle = new THREE.Mesh(circleGeo, lineMat);
+circle.rotation.x = -Math.PI/2;
+circle.position.y = 0.01;
+scene.add(circle);
+
+const dotMat = new THREE.MeshBasicMaterial({ color: 0xd90429 });
+const dotGeo = new THREE.CircleGeometry(0.15, 24);
+[[-3, -5], [3, -5], [-3, 5], [3, 5]].forEach(([x, z]) => {
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.rotation.x = -Math.PI/2;
+    dot.position.set(x, 0.01, z);
+    scene.add(dot);
+});
+
+// ========== БОРТА ==========
+const wallMat = new THREE.MeshStandardMaterial({ color: 0xd84315, roughness: 0.5 });
+function makeWall(x, z, w, d) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(w, WALL_H, d), wallMat);
+    wall.position.set(x, WALL_H/2, z);
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    scene.add(wall);
+    return wall;
+}
+makeWall(-TABLE_W/2, 0, 0.2, TABLE_L);
+makeWall(TABLE_W/2, 0, 0.2, TABLE_L);
+const sideLen = (TABLE_L - GOAL_W) / 2;
+makeWall(0, -TABLE_L/2 + sideLen/2, TABLE_W, 0.2);
+makeWall(0, TABLE_L/2 - sideLen/2, TABLE_W, 0.2);
+
+const goalBackMat = new THREE.MeshStandardMaterial({ color: 0x222222, transparent: true, opacity: 0.6 });
+const goalBack1 = new THREE.Mesh(new THREE.BoxGeometry(GOAL_W, WALL_H, 0.1), goalBackMat);
+goalBack1.position.set(0, WALL_H/2, -TABLE_L/2 - 0.3);
+scene.add(goalBack1);
+const goalBack2 = goalBack1.clone();
+goalBack2.position.z = TABLE_L/2 + 0.3;
+scene.add(goalBack2);
+
+// ========== ШАЙБА ==========
+const puckMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4, metalness: 0.3 });
+const puck = new THREE.Mesh(new THREE.CylinderGeometry(PUCK_R, PUCK_R, PUCK_H, 32), puckMat);
+puck.position.y = PUCK_H/2;
+puck.castShadow = true;
+scene.add(puck);
+const puckVel = { x: 0, z: 0 };
+
+// ========== КЛЮШКИ ==========
+function makeMallet(color) {
+    const group = new THREE.Group();
+    const baseMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.4 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(MALLET_R, MALLET_R*1.1, MALLET_H, 32), baseMat);
+    base.position.y = MALLET_H/2;
+    base.castShadow = true;
+    group.add(base);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(MALLET_R*0.55, 24, 16), baseMat);
+    knob.position.y = MALLET_H + 0.15;
+    knob.castShadow = true;
+    group.add(knob);
+    return group;
+}
+
+const malletP1 = makeMallet(0xe53935);
+malletP1.position.set(0, 0, TABLE_L/4);
+scene.add(malletP1);
+
+const malletP2 = makeMallet(0x1e88e5);
+malletP2.position.set(0, 0, -TABLE_L/4);
+scene.add(malletP2);
+const malletP2Vel = { x: 0, z: 0 };
+
+// ========== УПРАВЛЕНИЕ ==========
+const mouse = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const target = new THREE.Vector3();
+let smoothedInput = { x: 0, z: 0 };
+
+function handleInput(clientX, clientY) {
+    if (gameOver || !gameStarted) return;
+    
+    // Ограничиваем частоту обработки на мобильных
+    const now = Date.now();
+    if (window.innerWidth < 768 && now - lastTouchTime < 16) return;
+    lastTouchTime = now;
+
+    mouse.x = (clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    raycaster.ray.intersectPlane(plane, target);
+    
+    target.z = Math.max(0.8, Math.min(TABLE_L/2 - MALLET_R, target.z));
+    target.x = Math.max(-TABLE_W/2 + MALLET_R, Math.min(TABLE_W/2 - MALLET_R, target.x));
+    
+    // Сглаживание для мобильных
+    smoothedInput.x += (target.x - smoothedInput.x) * (window.innerWidth < 768 ? 0.3 : 0.5);
+    smoothedInput.z += (target.z - smoothedInput.z) * (window.innerWidth < 768 ? 0.3 : 0.5);
+    
+    malletP1.position.x = smoothedInput.x;
+    malletP1.position.z = smoothedInput.z;
+}
+
+// ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
+// Мышь
+window.addEventListener('mousemove', e => handleInput(e.clientX, e.clientY));
+
+// Сенсор
+function handleTouchStart(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (touch) {
+        touchId = touch.identifier;
+        handleInput(touch.clientX, touch.clientY);
+    }
+}
+
+function handleTouchMove(e) {
+    e.preventDefault();
+    for (let touch of e.changedTouches) {
+        if (touchId === null || touch.identifier === touchId) {
+            handleInput(touch.clientX, touch.clientY);
+            break;
+        }
+    }
+}
+
+function handleTouchEnd(e) {
+    touchId = null;
+}
+
+window.addEventListener('touchstart', handleTouchStart, { passive: false });
+window.addEventListener('touchmove', handleTouchMove, { passive: false });
+window.addEventListener('touchend', handleTouchEnd);
+window.addEventListener('touchcancel', handleTouchEnd);
+
+// Ресайз
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
+
+// Ориентация экрана
+if (window.screen && window.screen.orientation) {
+    window.screen.orientation.addEventListener('change', () => {
+        setTimeout(() => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }, 300);
+    });
+}
+
+// ========== СТАРТ ИГРЫ ==========
+startBtn.addEventListener('click', () => {
+    initAudio();
+    startScreen.style.display = 'none';
+    gameStarted = true;
+    playPuckSound(0.5);
+});
+
+// Также по клику на экран (для мобильных)
+document.addEventListener('click', () => {
+    if (!gameStarted && !startScreen.style.display || startScreen.style.display !== 'none') {
+        initAudio();
+    }
+});
+
+// ========== ИГРОВАЯ ЛОГИКА ==========
+function resetPuck(towardsPlayer) {
+    puck.position.x = 0;
+    puck.position.z = 0;
+    puckVel.x = (Math.random() - 0.5) * 0.1;
+    puckVel.z = towardsPlayer ? 0.15 : -0.15;
+}
+
+function circleCollision(ax, az, bx, bz, ar, br, bVel) {
+    const dx = bx - ax, dz = bz - az;
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    const minDist = ar + br;
+    if (dist < minDist && dist > 0.0001) {
+        const nx = dx/dist, nz = dz/dist;
+        const overlap = minDist - dist;
+        puck.position.x += nx * overlap;
+        puck.position.z += nz * overlap;
+        const power = 1.6;
+        puckVel.x = nx * power + (bVel ? bVel.x * 0.5 : 0);
+        puckVel.z = nz * power + (bVel ? bVel.z * 0.5 : 0);
+        const impactSpeed = Math.sqrt(puckVel.x*puckVel.x + puckVel.z*puckVel.z);
+        playPuckSound(impactSpeed);
+    }
+}
+
+function updateAI() {
+    if (gameOver || !gameStarted) return;
+    
+    const aiSpeed = 0.12;
+    let tx, tz;
+    const puckX = puck.position.x, puckZ = puck.position.z;
+    const halfW = TABLE_W/2 - 0.1, halfL = TABLE_L/2 - 0.1;
+    const nearLeftWall = puckX < -halfW + 1.2;
+    const nearRightWall = puckX > halfW - 1.2;
+    const nearTopWall = puckZ < -halfL + 1.2;
+    const nearCorner = (nearLeftWall || nearRightWall) && nearTopWall;
+
+    if (puckZ < 0) {
+        if (nearCorner) {
+            if (nearLeftWall) { tx = puckX + 1.2; tz = puckZ + 0.2; } 
+            else { tx = puckX - 1.2; tz = puckZ + 0.2; }
+        } else if (nearLeftWall || nearRightWall) {
+            tx = nearLeftWall ? puckX + 0.9 : puckX - 0.9;
+            tz = puckZ + 0.3;
+        } else {
+            tx = puckX;
+            tz = Math.max(-halfL + MALLET_R + 0.5, puckZ - 0.3);
+        }
+        const dxToPuck = puckX - malletP2.position.x;
+        const dzToPuck = puckZ - malletP2.position.z;
+        const distToPuck = Math.sqrt(dxToPuck*dxToPuck + dzToPuck*dzToPuck);
+        if (distToPuck < MALLET_R + PUCK_R + 0.1 && (nearLeftWall || nearRightWall || nearTopWall)) {
+            tx = malletP2.position.x - Math.sign(dxToPuck) * 0.5;
+            tz = malletP2.position.z + 0.8;
+        }
+    } else {
+        tx = puckX * 0.4;
+        tz = -TABLE_L/4;
+    }
+    
+    tx += (Math.random() - 0.5) * 0.05;
+    tz += (Math.random() - 0.5) * 0.05;
+    
+    const dx = tx - malletP2.position.x, dz = tz - malletP2.position.z;
+    const d = Math.sqrt(dx*dx + dz*dz);
+    if (d > 0.05) {
+        malletP2Vel.x = (dx/d) * aiSpeed;
+        malletP2Vel.z = (dz/d) * aiSpeed;
+        malletP2.position.x += malletP2Vel.x;
+        malletP2.position.z += malletP2Vel.z;
+    } else {
+        malletP2Vel.x = 0;
+        malletP2Vel.z = 0;
+    }
+    
+    malletP2.position.z = Math.max(-TABLE_L/2 + MALLET_R, Math.min(-0.8, malletP2.position.z));
+    malletP2.position.x = Math.max(-TABLE_W/2 + MALLET_R, Math.min(TABLE_W/2 - MALLET_R, malletP2.position.x));
+}
+
+function showGoal() {
+    goalEl.style.display = 'block';
+    goalEl.style.animation = 'none';
+    void goalEl.offsetWidth;
+    goalEl.style.animation = 'flash 0.8s ease-out';
+    setTimeout(() => goalEl.style.display = 'none', 800);
+    speak('Гол!');
+}
+
+function showWinner(winner) {
+    gameOver = true;
+    winnerEl.style.display = 'block';
+    if (winner === 'p1') {
+        winnerTextEl.innerHTML = '🏆 ТЫ ПОБЕДИЛ!';
+        speak('Ты победил! Поздравляю!');
+    } else {
+        winnerTextEl.innerHTML = '💀 ПОБЕДА ИИ';
+        speak('Победил компьютер. Попробуй ещё раз.');
+    }
+}
+
+function restartGame() {
+    scoreP1 = 0;
+    scoreP2 = 0;
+    p1El.textContent = 0;
+    p2El.textContent = 0;
+    winnerEl.style.display = 'none';
+    gameOver = false;
+    resetPuck(true);
+}
+
+// ========== ИГРОВОЙ ЦИКЛ ==========
+resetPuck(true);
+
+function animate() {
+    requestAnimationFrame(animate);
+    updateAI();
+    
+    if (!gameOver && gameStarted) {
+        // Движение шайбы
+        puck.position.x += puckVel.x;
+        puck.position.z += puckVel.z;
+        puckVel.x *= FRICTION;
+        puckVel.z *= FRICTION;
+        
+        const sp = Math.sqrt(puckVel.x*puckVel.x + puckVel.z*puckVel.z);
+        if (sp > MAX_PUCK_SPEED) {
+            puckVel.x = (puckVel.x/sp) * MAX_PUCK_SPEED;
+            puckVel.z = (puckVel.z/sp) * MAX_PUCK_SPEED;
+        }
+        
+        // Столкновения с бортами
+        const halfW = TABLE_W/2 - 0.1, halfL = TABLE_L/2 - 0.1;
+        
+        if (puck.position.x < -halfW + PUCK_R) {
+            puck.position.x = -halfW + PUCK_R;
+            puckVel.x *= -0.85;
+            playPuckSound(Math.abs(puckVel.x));
+        }
+        if (puck.position.x > halfW - PUCK_R) {
+            puck.position.x = halfW - PUCK_R;
+            puckVel.x *= -0.85;
+            playPuckSound(Math.abs(puckVel.x));
+        }
+        
+        // Голы
+        const inGoalX = Math.abs(puck.position.x) < GOAL_W/2 - PUCK_R;
+        
+        if (puck.position.z < -halfL + PUCK_R) {
+            if (inGoalX) {
+                if (puck.position.z < -halfL - 0.3) {
+                    scoreP1++;
+                    p1El.textContent = scoreP1;
+                    showGoal();
+                    if (scoreP1 >= WIN_SCORE) {
+                        showWinner('p1');
+                    } else {
+                        resetPuck(false);
+                    }
+                }
+            } else {
+                puck.position.z = -halfL + PUCK_R;
+                puckVel.z *= -0.85;
+                playPuckSound(Math.abs(puckVel.z));
+            }
+        }
+        
+        if (puck.position.z > halfL - PUCK_R) {
+            if (inGoalX) {
+                if (puck.position.z > halfL + 0.3) {
+                    scoreP2++;
+                    p2El.textContent = scoreP2;
+                    showGoal();
+                    if (scoreP2 >= WIN_SCORE) {
+                        showWinner('p2');
+                    } else {
+                        resetPuck(true);
+                    }
+                }
+            } else {
+                puck.position.z = halfL - PUCK_R;
+                puckVel.z *= -0.85;
+                playPuckSound(Math.abs(puckVel.z));
+            }
+        }
+        
+        // Столкновения с клюшками
+        circleCollision(
+            malletP1.position.x, malletP1.position.z,
+            puck.position.x, puck.position.z,
+            MALLET_R, PUCK_R, {x:0, z:0}
+        );
+        circleCollision(
+            malletP2.position.x, malletP2.position.z,
+            puck.position.x, puck.position.z,
+            MALLET_R, PUCK_R, malletP2Vel
+        );
+        
+        // Вращение шайбы
+        puck.rotation.y += sp * 2;
+    }
+    
+    renderer.render(scene, camera);
+}
+
+animate();
+
+// ========== ОБРАБОТКА ОШИБОК ==========
+window.addEventListener('error', (e) => {
+    console.log('Игровая ошибка:', e.message);
+});
+
+// ========== ПОДДЕРЖКА PWA ==========
+if ('serviceWorker' in navigator) {
+    // Можно добавить регистрацию Service Worker для PWA
+}
+
+console.log('🎮 3D Настольный Хоккей загружен!');
+console.log('📱 Игра оптимизирована для всех устройств');
+</script>
+</body>
+</html>
